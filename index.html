@@ -1,0 +1,203 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Recruitment STM Garage</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* (Gaya sama seperti sebelumnya, dipersingkat di sini tapi tetap rapi) */
+body{font-family:Roboto, sans-serif;background:#f0f2f5;margin:0}
+header{background:#009688;color:#fff;padding:18px 24px;position:relative}
+.menu-btn{position:absolute;right:18px;top:12px;padding:8px 12px;border-radius:8px;border:none;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer}
+.dropdown{position:absolute;right:18px;top:56px;background:#fff;border-radius:10px;display:none;box-shadow:0 6px 20px rgba(0,0,0,0.15)}
+.dropdown a{display:block;padding:10px 16px;color:#00796B;text-decoration:none}
+main{max-width:980px;margin:26px auto;padding:26px;background:#fff;border-radius:12px}
+.form-row{display:flex;gap:12px}
+.form-group{position:relative;margin-bottom:12px}
+input,textarea,select,button{width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;outline:none}
+button{background:#00796B;color:#fff;border:none;cursor:pointer}
+#previewSS{max-width:240px;border-radius:8px;margin-top:8px;display:none}
+.card{padding:14px;border-radius:12px;background:#f9fafb;box-shadow:0 6px 18px rgba(0,0,0,0.06);margin-bottom:12px}
+.small{font-size:0.9rem;color:#555}
+.status{padding:6px 12px;border-radius:6px;color:#fff}
+.menunggu{background:#f39c12}.terima{background:#27ae60}.tolak{background:#e74c3c}
+.role-buttons button{margin-left:8px}
+.row{display:flex;justify-content:space-between;align-items:center}
+</style>
+</head>
+<body>
+<header>
+  <strong style="font-size:1.1rem">RECRUITMENT STM GARAGE</strong>
+  <button class="menu-btn" onclick="toggleMenu()">Menu ▾</button>
+  <div class="dropdown" id="menu" style="display:none">
+    <a href="#about">Tentang STM Company</a>
+    <a href="https://discord.gg/YOUR_DISCORD_LINK" target="_blank">Link Discord</a>
+    <a href="#riwayat">Riwayat Lamaran</a>
+    <a href="/logout">Logout</a>
+  </div>
+</header>
+
+<main>
+  <h2 id="about">Formulir Pendaftaran Mekanik</h2>
+
+  <div class="card">
+    <div id="loginArea">
+      <p class="small">Untuk mengisi form otomatis, silakan login via Discord.</p>
+      <a id="loginBtn" href="/login"><button>Login with Discord</button></a>
+    </div>
+
+    <form id="form" style="display:none" enctype="multipart/form-data">
+      <div style="display:flex;gap:12px">
+        <div style="flex:1" class="form-group">
+          <input id="namaIC" name="namaIC" placeholder="Nama IC" required>
+        </div>
+        <div style="width:160px" class="form-group">
+          <input id="levelIC" name="levelIC" placeholder="Level IC" required>
+        </div>
+      </div>
+
+      <div class="form-group"><textarea id="alasan" name="alasan" rows="3" placeholder="Alasan bergabung" required></textarea></div>
+
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <label class="small">Sertakan SS Stats/TAB (opsional)</label>
+          <input type="file" id="ssStats" name="file" accept="image/*">
+        </div>
+        <div style="width:240px">
+          <img id="previewSS" alt="preview">
+        </div>
+      </div>
+
+      <div class="form-group"><textarea id="note" name="note" rows="2" placeholder="Note (opsional)"></textarea></div>
+
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <select id="tag" name="tag" required>
+            <option value="">Pilih Tag/Role</option>
+            <option value="Manager">Manager</option>
+            <option value="Asisten">Asisten</option>
+            <option value="Mekanik">Mekanik</option>
+            <option value="Supervisor">Supervisor</option>
+          </select>
+        </div>
+        <div style="width:250px" class="form-group">
+          <input id="discordInfo" name="discordInfo" readonly placeholder="Discord: belum login">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:center">
+        <button type="submit">Kirim Lamaran</button>
+        <div id="formMsg" style="margin-left:12px;color:green;display:none">Terkirim</div>
+      </div>
+    </form>
+  </div>
+
+  <h3 id="riwayat">Riwayat Lamaran</h3>
+  <div id="history"></div>
+</main>
+
+<script>
+const menu = document.getElementById('menu')
+function toggleMenu(){ menu.style.display = menu.style.display==='flex' ? 'none':'flex' }
+window.onclick = (e)=>{ if(!e.target.matches('.menu-btn')) menu.style.display='none' }
+
+async function me(){
+  const res = await fetch('/me')
+  const j = await res.json()
+  return j
+}
+
+function formatStatus(s){
+  if(s==='Menunggu') return `<span class="status menunggu">${s}</span>`
+  if(s==='Diterima') return `<span class="status terima">${s}</span>`
+  return `<span class="status tolak">${s}</span>`
+}
+
+async function loadHistory(){
+  const res = await fetch('/riwayat')
+  const data = await res.json()
+  const container = document.getElementById('history')
+  container.innerHTML = ''
+  if(!data.length){ container.innerHTML = '<p class="small">Belum ada lamaran</p>'; return }
+  data.forEach(item=>{
+    const el = document.createElement('div')
+    el.className = 'card'
+    el.innerHTML = `
+      <div class="row">
+        <div>
+          <strong>${item.namaIC}</strong> (${item.levelIC}) - <span class="small">${item.tag}</span><br>
+          <span class="small">Discord: ${item.discord_user.username} ${item.discord_user.email? '('+item.discord_user.email+')':''}</span>
+        </div>
+        <div style="text-align:right">
+          ${formatStatus(item.status)}
+          <div style="margin-top:8px">
+            <button class="small" onclick="changeStatus('${item.id}','Diterima')">Terima</button>
+            <button class="small" onclick="changeStatus('${item.id}','Ditolak')">Tidak</button>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:8px" class="small">${item.alasan}<br>Note: ${item.note}</div>
+    `
+    container.appendChild(el)
+  })
+}
+
+async function changeStatus(id,status){
+  const res = await fetch('/update_status', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id,status})
+  })
+  if(res.ok){ loadHistory(); alert('Status updated: '+status) }
+  else alert('Gagal update status')
+}
+
+async function init(){
+  const info = await me()
+  if(info.logged_in){
+    // show form, auto-fill discord info
+    document.getElementById('loginArea').style.display = 'none'
+    document.getElementById('form').style.display = 'block'
+    document.getElementById('discordInfo').value = info.user.username + (info.user.email ? ' | '+info.user.email : '')
+  } else {
+    document.getElementById('loginArea').style.display = 'block'
+    document.getElementById('form').style.display = 'none'
+  }
+  loadHistory()
+}
+
+document.getElementById('ssStats').addEventListener('change', function(){
+  const file = this.files[0]
+  if(!file){ document.getElementById('previewSS').style.display = 'none'; return }
+  const reader = new FileReader()
+  reader.onload = function(e){
+    const img = document.getElementById('previewSS')
+    img.src = e.target.result
+    img.style.display = 'block'
+  }
+  reader.readAsDataURL(file)
+})
+
+document.getElementById('form').addEventListener('submit', async function(e){
+  e.preventDefault()
+  const form = document.getElementById('form')
+  const fd = new FormData(form)
+  // send to server
+  const res = await fetch('/submit', { method:'POST', body: fd })
+  const j = await res.json()
+  if(j.success){
+    document.getElementById('formMsg').style.display = 'inline'
+    setTimeout(()=>document.getElementById('formMsg').style.display='none',2500)
+    form.reset()
+    document.getElementById('previewSS').style.display = 'none'
+    loadHistory()
+  } else {
+    alert('Gagal: '+(j.error||'unknown'))
+  }
+})
+
+init()
+</script>
+</body>
+</html>
